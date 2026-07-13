@@ -112,6 +112,67 @@
   Reset view
 </button>
 
+<button id="addBtn"><span class="plus">+</span> Add Place</button>
+
+<div id="addSheet">
+  <div class="as-card">
+    <div class="as-head">
+      <div class="as-title">Add a place</div>
+      <button class="as-close" id="afClose" aria-label="Close">✕</button>
+    </div>
+    <div class="as-body">
+      <form id="addForm" novalidate>
+        <label class="af-label" for="afName">Name *</label>
+        <input class="af-input" id="afName" maxlength="120" placeholder="e.g. Ichiran Ramen Shibuya" autocomplete="off">
+
+        <label class="af-label" for="afCat">Category *</label>
+        <select class="af-select" id="afCat"></select>
+
+        <label class="af-label">Location *</label>
+        <div class="af-loc-row">
+          <input class="af-input" id="afLocQ" placeholder="Search a place or address…" autocomplete="off">
+          <button type="button" class="af-loc-btn" id="afLocSearch">Search</button>
+        </div>
+        <div id="afLocResults"></div>
+        <div class="af-loc-alt">or <button type="button" id="afDropPin">drop a pin on the map</button></div>
+        <div id="afLocChip"><span>📍</span><span id="afLocChipTxt"></span><button type="button" class="chip-x" id="afLocClear" aria-label="Clear location">✕</button></div>
+
+        <label class="af-label" for="afTagline">Tagline</label>
+        <input class="af-input" id="afTagline" maxlength="90" placeholder="One-liner, optional">
+
+        <label class="af-label" for="afDesc">Description</label>
+        <textarea class="af-textarea" id="afDesc" rows="2" placeholder="Optional"></textarea>
+
+        <div class="af-row2">
+          <div>
+            <label class="af-label" for="afHours">Hours</label>
+            <input class="af-input" id="afHours" placeholder="If known">
+          </div>
+          <div>
+            <label class="af-label" for="afCost">Cost</label>
+            <input class="af-input" id="afCost" placeholder="If known">
+          </div>
+        </div>
+
+        <label class="af-label" for="afTip">Tip</label>
+        <input class="af-input" id="afTip" placeholder="Optional — booking advice, best time, etc.">
+
+        <label class="af-label" for="afWho">Your name</label>
+        <input class="af-input" id="afWho" maxlength="40" placeholder="So the group knows who suggested it">
+
+        <div class="af-err" id="afErr"></div>
+
+        <div class="as-actions">
+          <button type="button" id="afCancel">Cancel</button>
+          <button type="submit" class="submit">Add as candidate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="pinDropHint">Tap the map to place the pin <button type="button" id="pinDropCancel">Cancel</button></div>
+
 <div id="toast"></div>
 
 <div id="dayPicker">

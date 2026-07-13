@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { CATEGORIES, dayColor } from "./data.js";
-import { onPlaces, confirmPlace, moveToDay, discardPlace, restorePlace, getDiscarded } from "./store.js";
+import { onPlaces, addPlace, confirmPlace, moveToDay, discardPlace, restorePlace, getDiscarded } from "./store.js";
 
 /* ============================================================
    STATE
@@ -523,6 +523,157 @@ function closeDayPicker(day) {
 }
 
 /* ============================================================
+   ADD A PLACE
+   ============================================================ */
+
+const addSheet = document.getElementById("addSheet");
+const afErr = document.getElementById("afErr");
+let afCoords = null;        // [lat, lng] chosen via search or pin drop
+let previewMarker = null;   // temporary marker showing the chosen spot
+
+function buildCategorySelect() {
+  const sel = document.getElementById("afCat");
+  sel.innerHTML = `<option value="">Choose a category…</option>` +
+    Object.entries(CATEGORIES)
+      .map(([key, c]) => `<option value="${key}">${c.symbol} ${c.label}</option>`)
+      .join("");
+}
+
+function openAddSheet() {
+  document.getElementById("afWho").value = localStorage.getItem("userName") || "";
+  addSheet.classList.add("show");
+  document.getElementById("afName").focus();
+}
+
+function closeAddSheet(resetForm) {
+  addSheet.classList.remove("show");
+  afErr.classList.remove("show");
+  if (resetForm) {
+    document.getElementById("addForm").reset();
+    setAfCoords(null);
+    document.getElementById("afLocResults").innerHTML = "";
+  }
+}
+
+function setAfCoords(coords, label) {
+  afCoords = coords;
+  const chip = document.getElementById("afLocChip");
+  if (previewMarker) { previewMarker.remove(); previewMarker = null; }
+  if (!coords) {
+    chip.classList.remove("set");
+    return;
+  }
+  document.getElementById("afLocChipTxt").textContent =
+    label || `${coords[0].toFixed(4)}, ${coords[1].toFixed(4)}`;
+  chip.classList.add("set");
+  previewMarker = L.circleMarker(coords, {
+    radius: 9, color: "#dc2626", weight: 3, fillColor: "#fff", fillOpacity: 1,
+  }).addTo(map);
+  map.setView(coords, Math.max(map.getZoom(), 14));
+}
+
+async function searchLocation() {
+  const q = document.getElementById("afLocQ").value.trim();
+  const wrap = document.getElementById("afLocResults");
+  if (!q) return;
+  wrap.innerHTML = `<div class="cand-empty">Searching…</div>`;
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=jp&q=${encodeURIComponent(q)}`;
+    const results = await fetch(url).then((r) => r.json());
+    wrap.innerHTML = "";
+    if (!results.length) {
+      wrap.innerHTML = `<div class="cand-empty">No matches — try a simpler name, or drop a pin instead.</div>`;
+      return;
+    }
+    results.forEach((r) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "af-loc-result";
+      btn.textContent = r.display_name;
+      btn.addEventListener("click", () => {
+        setAfCoords([parseFloat(r.lat), parseFloat(r.lon)], r.display_name.split(",")[0]);
+        wrap.innerHTML = "";
+      });
+      wrap.appendChild(btn);
+    });
+  } catch {
+    wrap.innerHTML = `<div class="cand-empty">Search unavailable (offline?) — drop a pin instead.</div>`;
+  }
+}
+
+function enterPinDropMode() {
+  addSheet.classList.remove("show");
+  document.body.classList.add("pin-drop-mode");
+  document.getElementById("pinDropHint").classList.add("show");
+  if (isMobile()) closeSidebar();
+  map.once("click", onPinDropClick);
+}
+
+function exitPinDropMode() {
+  document.body.classList.remove("pin-drop-mode");
+  document.getElementById("pinDropHint").classList.remove("show");
+  map.off("click", onPinDropClick);
+}
+
+function onPinDropClick(e) {
+  exitPinDropMode();
+  setAfCoords([e.latlng.lat, e.latlng.lng]);
+  addSheet.classList.add("show");
+}
+
+async function submitAddForm(e) {
+  e.preventDefault();
+  const name = document.getElementById("afName").value.trim();
+  const category = document.getElementById("afCat").value;
+  const problems = [];
+  if (!name) problems.push("a name");
+  if (!category) problems.push("a category");
+  if (!afCoords) problems.push("a location (search or drop a pin)");
+  if (problems.length) {
+    afErr.textContent = `Still needed: ${problems.join(", ")}.`;
+    afErr.classList.add("show");
+    return;
+  }
+  const who = document.getElementById("afWho").value.trim();
+  if (who) localStorage.setItem("userName", who);
+
+  await addPlace({
+    name,
+    category,
+    coords: afCoords,
+    tagline: document.getElementById("afTagline").value.trim(),
+    desc: document.getElementById("afDesc").value.trim(),
+    hours: document.getElementById("afHours").value.trim(),
+    cost: document.getElementById("afCost").value.trim(),
+    tip: document.getElementById("afTip").value.trim(),
+    addedBy: who || "Anonymous",
+  });
+  closeAddSheet(true);
+  toast(`${name} added as a candidate`);
+}
+
+function wireAddPlace() {
+  buildCategorySelect();
+  document.getElementById("addBtn").addEventListener("click", openAddSheet);
+  document.getElementById("afClose").addEventListener("click", () => closeAddSheet(false));
+  document.getElementById("afCancel").addEventListener("click", () => closeAddSheet(true));
+  addSheet.addEventListener("click", (e) => {
+    if (e.target === addSheet) closeAddSheet(false);
+  });
+  document.getElementById("afLocSearch").addEventListener("click", searchLocation);
+  document.getElementById("afLocQ").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); searchLocation(); }
+  });
+  document.getElementById("afLocClear").addEventListener("click", () => setAfCoords(null));
+  document.getElementById("afDropPin").addEventListener("click", enterPinDropMode);
+  document.getElementById("pinDropCancel").addEventListener("click", () => {
+    exitPinDropMode();
+    addSheet.classList.add("show");
+  });
+  document.getElementById("addForm").addEventListener("submit", submitAddForm);
+}
+
+/* ============================================================
    TOAST
    ============================================================ */
 
@@ -693,6 +844,7 @@ function restoreFromHash() {
 buildDayStripe();
 buildDayPills();
 buildDayPicker();
+wireAddPlace();
 restoreFromHash();
 refreshDayPills();
 
