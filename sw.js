@@ -1,7 +1,7 @@
 /* Service worker: offline app shell + map tile cache.
    Bump CACHE_VERSION on every deploy that changes shell files. */
 
-const CACHE_VERSION = "v2.0.0";
+const CACHE_VERSION = "v2.1.0";
 const SHELL_CACHE = `japan-map-shell-${CACHE_VERSION}`;
 const TILE_CACHE = "japan-map-tiles";
 const MAX_TILES = 800; // ~30-60MB; enough for the whole itinerary at street zoom
@@ -14,6 +14,10 @@ const SHELL_ASSETS = [
   "./js/data.js",
   "./js/app.js",
   "./js/install.js",
+  "./js/store.js",
+  "./js/firebase-config.js",
+  "./vendor/firebase/firebase-app.js",
+  "./vendor/firebase/firebase-firestore.js",
   "./vendor/leaflet/leaflet.js",
   "./vendor/leaflet/leaflet.css",
   "./vendor/leaflet/images/layers.png",

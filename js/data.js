@@ -2,7 +2,7 @@
    DATA
    ============================================================ */
 
-const trip = [
+export const SEED_TRIP = [
   // DAY 1
   { day: 1, name: "Shibuya Crossing", coords: [35.6595, 139.7005], category: "viewpoint",
     tagline: "World's busiest pedestrian scramble",
@@ -340,7 +340,7 @@ const trip = [
    CONFIG
    ============================================================ */
 
-const CATEGORIES = {
+export const CATEGORIES = {
   shrine:        { color: "#dc2626", symbol: "⛩",  label: "Shrine / Temple" },
   food:          { color: "#ea580c", symbol: "🍜", label: "Food / Restaurant" },
   viewpoint:     { color: "#0284c7", symbol: "🌆", label: "Viewpoint" },
@@ -354,10 +354,12 @@ const CATEGORIES = {
 };
 
 // Day colors: blue (1) → red (16)
-function dayColor(day) {
+export function dayColor(day) {
   const t = (day - 1) / 15; // 0..1
   // interpolate hue from blue (220) to red (0) via 180 (cyan) → 60 (yellow) → 0 (red)
   // simpler: HSL hue 215 -> 0
   const hue = 215 - (215 * t);
   return `hsl(${hue}, 72%, 50%)`;
 }
+
+export const TOTAL_DAYS = 16;

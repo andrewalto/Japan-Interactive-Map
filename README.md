@@ -8,9 +8,15 @@ installable PWA the travel group can use to add, discuss, and confirm places on 
 ```
 index.html                  entry point
 css/app.css                 all app styles (sidebar, pins, popups, responsive)
-js/data.js                  trip places + category definitions + day colors
+js/data.js                  V1 seed itinerary + category definitions + day colors
 js/app.js                   map setup, markers, filtering, sidebar UI, routes
+js/store.js                 shared places store (Firestore; local fallback)
+js/firebase-config.js       Firebase project keys (public by design)
+js/install.js               PWA install banner
+sw.js / manifest.json       service worker + web app manifest
+firestore.rules             security rules to paste into the Firebase console
 vendor/leaflet/             Leaflet 1.9.4 (vendored so the app works offline)
+vendor/firebase/            Firebase SDK 12.1.0 (vendored, ditto)
 ```
 
 ## Run locally

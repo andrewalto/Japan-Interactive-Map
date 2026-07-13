@@ -1,0 +1,26 @@
+// Firestore security rules for the Japan trip map.
+// Paste into: Firebase console → Firestore Database → Rules → Publish.
+//
+// No user accounts (by design), so the `places` collection is open to
+// anyone who has the app — acceptable for a low-stakes trip planner.
+// The rules still validate the shape of writes so a stray script can't
+// fill the collection with garbage, and nothing outside /places is
+// touchable. After the trip, flip `allow write` to `false` to freeze it.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /places/{placeId} {
+      allow read: if true;
+      allow create, update: if
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.name.size() <= 120 &&
+        request.resource.data.category is string &&
+        request.resource.data.coords is list &&
+        request.resource.data.coords.size() == 2 &&
+        request.resource.data.status in ['candidate', 'confirmed'];
+      allow delete: if false; // soft-delete only (deletedAt field)
+    }
+  }
+}

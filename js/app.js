@@ -1,6 +1,16 @@
 /* ============================================================
+   APP — map, sidebar, filtering. Data arrives from the store
+   (Firestore-backed, or bundled V1 itinerary as a fallback).
+   ============================================================ */
+
+import { CATEGORIES, dayColor } from "./data.js";
+import { onPlaces } from "./store.js";
+
+/* ============================================================
    STATE
    ============================================================ */
+
+let places = []; // live list from the store
 
 const state = {
   selectedDays: new Set(),        // empty = all
@@ -89,7 +99,7 @@ function popupHTML(p) {
 
 function buildMarkers() {
   allMarkers.length = 0;
-  trip.forEach(p => {
+  places.forEach(p => {
     const m = L.marker(p.coords, { icon: makeDivIcon(p) });
     m.bindPopup(popupHTML(p), { closeButton: true, autoPan: true, maxWidth: 280, minWidth: 280 });
     allMarkers.push({ marker: m, point: p });
@@ -143,7 +153,7 @@ function renderMarkers(fit = false) {
 
   // Pin count
   document.getElementById("pinCount").textContent =
-    visible.length === trip.length ? `${visible.length} pins` : `${visible.length} / ${trip.length}`;
+    visible.length === places.length ? `${visible.length} pins` : `${visible.length} / ${places.length}`;
 
   if (fit && visible.length > 0) {
     const bounds = L.latLngBounds(visible.map(v => v.point.coords));
@@ -160,7 +170,7 @@ function renderMarkers(fit = false) {
 function dayCentroids() {
   // Group visible points by day, compute centroid per day
   const buckets = {};
-  trip.forEach(p => {
+  places.forEach(p => {
     if (!pointVisible(p)) return;
     if (!buckets[p.day]) buckets[p.day] = [];
     buckets[p.day].push(p.coords);
@@ -268,12 +278,13 @@ function buildCategoryList() {
   const wrap = document.getElementById("catList");
   wrap.innerHTML = "";
   Object.entries(CATEGORIES).forEach(([key, cat]) => {
-    const count = trip.filter(p => p.category === key).length;
+    const count = places.filter(p => p.category === key).length;
     if (count === 0) return; // hide unused categories like lodging
+    const enabled = state.enabledCats.has(key);
     const row = document.createElement("label");
-    row.className = "cat-row";
+    row.className = "cat-row" + (enabled ? "" : " off");
     row.innerHTML = `
-      <input type="checkbox" checked />
+      <input type="checkbox" ${enabled ? "checked" : ""} />
       <span class="cat-dot" style="background:${cat.color};">${cat.symbol}</span>
       <span class="lbl">${cat.label}</span>
       <span class="cnt">${count}</span>
@@ -293,7 +304,7 @@ function buildLegend() {
   const wrap = document.getElementById("legendGrid");
   wrap.innerHTML = "";
   Object.entries(CATEGORIES).forEach(([key, cat]) => {
-    const count = trip.filter(p => p.category === key).length;
+    const count = places.filter(p => p.category === key).length;
     if (count === 0) return;
     const item = document.createElement("div");
     item.className = "legend-item";
@@ -473,30 +484,28 @@ function restoreFromHash() {
    INIT
    ============================================================ */
 
+// Static UI (doesn't depend on place data)
 buildDayStripe();
-buildMarkers();
 buildDayPills();
-buildCategoryList();
-buildLegend();
 restoreFromHash();
-
-// Sync category checkboxes if restored
-document.querySelectorAll("#catList .cat-row").forEach(row => {
-  const lbl = row.querySelector(".lbl").textContent;
-  const key = Object.entries(CATEGORIES).find(([_,c]) => c.label === lbl)?.[0];
-  if (!key) return;
-  const cb = row.querySelector("input");
-  const enabled = state.enabledCats.has(key);
-  cb.checked = enabled;
-  row.classList.toggle("off", !enabled);
-});
 refreshDayPills();
 
-renderMarkers(false);
+// Data-dependent UI: rebuilt on every store update (first load,
+// someone adds/confirms a place, offline sync catches up, …)
+let firstData = true;
+onPlaces((list) => {
+  places = list;
+  buildMarkers();
+  buildCategoryList();
+  buildLegend();
+  renderMarkers(false);
 
-// Fit to all on first load
-const startBounds = L.latLngBounds(trip.map(p => p.coords));
-map.fitBounds(startBounds, { padding: [40, 40] });
+  if (firstData && places.length > 0) {
+    firstData = false;
+    const startBounds = L.latLngBounds(places.map(p => p.coords));
+    map.fitBounds(startBounds, { padding: [40, 40] });
+  }
+});
 
 // Re-fit map on resize after a moment so it settles
 window.addEventListener("resize", () => {
