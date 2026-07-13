@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { CATEGORIES, dayColor } from "./data.js";
-import { onPlaces } from "./store.js";
+import { onPlaces, confirmPlace, discardPlace, restorePlace, getDiscarded } from "./store.js";
 
 /* ============================================================
    STATE
@@ -18,6 +18,7 @@ const state = {
   searchTerm: "",
   showRoute: false,
   showLabels: false,
+  showCandidatesWithDay: false,   // "also show candidates" when a day is filtered
 };
 
 const totalDays = 16;
@@ -49,9 +50,12 @@ function makeDivIcon(p) {
   const labelHTML = state.showLabels
     ? `<div class="pin-label">${escapeHtml(p.name)}</div>`
     : "";
+  const isCandidate = p.status === "candidate";
+  const statusClass = isCandidate ? "candidate" : "confirmed";
+  const pulseClass = isCandidate ? " candidate-pulse" : "";
   return L.divIcon({
     className: "pin-wrap",
-    html: `<div class="pin-wrap-outer"><div class="pin" style="--pin-color:${c.color};">${c.symbol}</div>${labelHTML}</div>`,
+    html: `<div class="pin-wrap-outer${pulseClass}"><div class="pin ${statusClass}" style="--pin-color:${c.color};">${c.symbol}</div>${labelHTML}</div>`,
     iconSize: [38, 38],
     iconAnchor: [19, 19],
     popupAnchor: [0, -20],
@@ -75,7 +79,7 @@ function popupHTML(p) {
     <div class="pop">
       <div class="pop-head" style="background:linear-gradient(135deg, ${c.color}, ${c.color}cc);">
         <div class="pop-badges">
-          <span class="pop-badge">Day ${p.day}</span>
+          <span class="pop-badge">${p.status === "candidate" ? "Candidate" : `Day ${p.day}`}</span>
           <span class="pop-badge">${escapeHtml(c.label)}</span>
         </div>
         <h3 class="pop-title">${escapeHtml(p.name)}</h3>
@@ -112,7 +116,13 @@ function buildMarkers() {
 
 function pointVisible(p) {
   if (!state.enabledCats.has(p.category)) return false;
-  if (state.selectedDays.size > 0 && !state.selectedDays.has(p.day)) return false;
+  if (state.selectedDays.size > 0) {
+    // Day view shows that day's confirmed plan; candidates (day = null)
+    // join only when the "also show candidates" toggle is on.
+    const inDay = state.selectedDays.has(p.day);
+    const asCandidate = state.showCandidatesWithDay && p.status === "candidate";
+    if (!inDay && !asCandidate) return false;
+  }
   if (state.searchTerm) {
     const t = state.searchTerm.toLowerCase();
     if (!(p.name.toLowerCase().includes(t) ||
@@ -272,6 +282,10 @@ function refreshDayPills() {
   const hint = document.getElementById("daysHint");
   if (state.selectedDays.size === 0) hint.textContent = "tap to filter";
   else hint.textContent = `${state.selectedDays.size} selected · tap again to clear`;
+
+  // Candidates toggle is only meaningful while a day is filtered
+  document.getElementById("candDayToggle")
+    .classList.toggle("visible", state.selectedDays.size > 0);
 }
 
 function buildCategoryList() {
@@ -326,6 +340,140 @@ function buildDayStripe() {
 }
 
 /* ============================================================
+   CANDIDATES PANEL
+   ============================================================ */
+
+function timeAgo(iso) {
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (!Number.isFinite(s)) return "";
+  if (s < 90) return "just now";
+  if (s < 3600) return `${Math.round(s / 60)}m ago`;
+  if (s < 86400) return `${Math.round(s / 3600)}h ago`;
+  return `${Math.round(s / 86400)}d ago`;
+}
+
+function getUserName() {
+  let name = localStorage.getItem("userName");
+  if (!name) {
+    name = (prompt("Your name (shown to the group when you confirm or add places):") || "").trim();
+    if (name) localStorage.setItem("userName", name);
+  }
+  return name || "Anonymous";
+}
+
+function focusPlace(id) {
+  const entry = allMarkers.find(({ point }) => point.id === id);
+  if (!entry) return;
+  map.setView(entry.point.coords, Math.max(map.getZoom(), 13), { animate: true });
+  entry.marker.openPopup();
+}
+
+function renderCandidates() {
+  const wrap = document.getElementById("candList");
+  const hint = document.getElementById("candHint");
+  const candidates = places
+    .filter((p) => p.status === "candidate")
+    .sort((a, b) => (b.addedAt || "").localeCompare(a.addedAt || ""));
+
+  hint.textContent = candidates.length
+    ? `${candidates.length} to decide`
+    : "";
+  wrap.innerHTML = "";
+
+  if (candidates.length === 0) {
+    wrap.innerHTML = `<div class="cand-empty">Nothing waiting on a decision. Ideas anyone adds will land here for the group to confirm or discard.</div>`;
+  }
+
+  candidates.forEach((p) => {
+    const c = CATEGORIES[p.category] || CATEGORIES.cultural;
+    const card = document.createElement("div");
+    card.className = "cand-card";
+    card.innerHTML = `
+      <div class="cc-top">
+        <span class="cc-dot" style="background:${c.color};"></span>
+        <span class="cc-name">${escapeHtml(p.name)}</span>
+      </div>
+      <div class="cc-by">${escapeHtml(c.label)} · by ${escapeHtml(p.addedBy || "?")} · ${timeAgo(p.addedAt)}</div>
+      <div class="cc-actions">
+        <button class="cc-btn confirm">Confirm</button>
+        <button class="cc-btn discard">Discard</button>
+      </div>
+    `;
+    card.addEventListener("click", (e) => {
+      if (e.target.closest(".cc-btn")) return;
+      focusPlace(p.id);
+      if (isMobile()) closeSidebar();
+    });
+    card.querySelector(".confirm").addEventListener("click", async () => {
+      const day = await showDayPicker(p.name);
+      if (day == null) return;
+      await confirmPlace(p.id, day, getUserName());
+      toast(`Confirmed to Day ${day}`);
+    });
+    card.querySelector(".discard").addEventListener("click", async () => {
+      await discardPlace(p.id);
+      toast(`Discarded — restorable for 7 days`);
+    });
+    wrap.appendChild(card);
+  });
+
+  renderDiscarded();
+}
+
+function renderDiscarded() {
+  const wrap = document.getElementById("discardedWrap");
+  const discarded = getDiscarded();
+  wrap.innerHTML = "";
+  if (discarded.length === 0) return;
+  discarded.forEach((p) => {
+    const row = document.createElement("div");
+    row.className = "discarded-row";
+    row.innerHTML = `
+      <span class="dr-name">${escapeHtml(p.name)}</span>
+      <button class="cc-btn restore">Restore</button>
+    `;
+    row.querySelector(".restore").addEventListener("click", async () => {
+      await restorePlace(p.id);
+      toast(`${p.name} restored as a candidate`);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+/* ============================================================
+   DAY PICKER
+   ============================================================ */
+
+let dpResolve = null;
+
+function buildDayPicker() {
+  const grid = document.getElementById("dpGrid");
+  for (let d = 1; d <= totalDays; d++) {
+    const btn = document.createElement("button");
+    btn.className = "dp-day";
+    btn.style.setProperty("--day-color", dayColor(d));
+    btn.textContent = d;
+    btn.addEventListener("click", () => closeDayPicker(d));
+    grid.appendChild(btn);
+  }
+  document.getElementById("dpCancel").addEventListener("click", () => closeDayPicker(null));
+  document.getElementById("dayPicker").addEventListener("click", (e) => {
+    if (e.target.id === "dayPicker") closeDayPicker(null);
+  });
+}
+
+function showDayPicker(placeName) {
+  document.getElementById("dpSub").textContent = placeName;
+  document.getElementById("dayPicker").classList.add("show");
+  return new Promise((res) => (dpResolve = res));
+}
+
+function closeDayPicker(day) {
+  document.getElementById("dayPicker").classList.remove("show");
+  if (dpResolve) { dpResolve(day); dpResolve = null; }
+}
+
+/* ============================================================
    TOAST
    ============================================================ */
 
@@ -363,6 +511,14 @@ routeToggle.addEventListener("click", () => {
   state.showRoute = !state.showRoute;
   routeToggle.classList.toggle("on", state.showRoute);
   renderRoute();
+});
+
+// "Also show candidates" toggle (day-filtered view)
+const candDayToggle = document.getElementById("candDayToggle");
+candDayToggle.addEventListener("click", () => {
+  state.showCandidatesWithDay = !state.showCandidatesWithDay;
+  candDayToggle.classList.toggle("on", state.showCandidatesWithDay);
+  renderMarkers(false);
 });
 
 // Labels toggle
@@ -487,6 +643,7 @@ function restoreFromHash() {
 // Static UI (doesn't depend on place data)
 buildDayStripe();
 buildDayPills();
+buildDayPicker();
 restoreFromHash();
 refreshDayPills();
 
@@ -498,6 +655,7 @@ onPlaces((list) => {
   buildMarkers();
   buildCategoryList();
   buildLegend();
+  renderCandidates();
   renderMarkers(false);
 
   if (firstData && places.length > 0) {

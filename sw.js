@@ -1,7 +1,7 @@
 /* Service worker: offline app shell + map tile cache.
    Bump CACHE_VERSION on every deploy that changes shell files. */
 
-const CACHE_VERSION = "v2.2.0";
+const CACHE_VERSION = "v2.3.0";
 const SHELL_CACHE = `japan-map-shell-${CACHE_VERSION}`;
 const TILE_CACHE = "japan-map-tiles";
 const MAX_TILES = 800; // ~30-60MB; enough for the whole itinerary at street zoom
@@ -32,7 +32,12 @@ const TILE_HOSTS = ["basemaps.cartocdn.com"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(SHELL_CACHE).then((cache) => cache.addAll(SHELL_ASSETS))
+    caches.open(SHELL_CACHE)
+      // no-cache: revalidate with the server so a version bump can never
+      // precache stale files out of the browser's HTTP cache
+      .then((cache) =>
+        cache.addAll(SHELL_ASSETS.map((u) => new Request(u, { cache: "no-cache" })))
+      )
       .then(() => self.skipWaiting())
   );
 });
@@ -71,7 +76,7 @@ self.addEventListener("fetch", (event) => {
   // cached shell as the offline fallback.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req)
+      fetch(req, { cache: "no-cache" })
         .then((res) => {
           const copy = res.clone();
           caches.open(SHELL_CACHE).then((c) => c.put("./index.html", copy));

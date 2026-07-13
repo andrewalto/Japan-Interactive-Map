@@ -49,6 +49,19 @@
     <div class="sb-section">
       <h3>Days <span class="hint" id="daysHint">tap to filter</span></h3>
       <div class="day-pills" id="dayPills"></div>
+      <div class="toggle-row" id="candDayToggle">
+        <div>
+          <div class="label">Also show candidates</div>
+          <div class="sublabel">Undecided ideas alongside this day's plan</div>
+        </div>
+        <div class="switch"></div>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <h3>Candidates <span class="hint" id="candHint"></span></h3>
+      <div class="cand-list" id="candList"></div>
+      <div id="discardedWrap"></div>
     </div>
 
     <div class="sb-section">
@@ -84,6 +97,10 @@
   </div>
 
   <div class="sb-footer">
+    <div class="status-legend">
+      <div class="legend-item"><span class="ldot gold"></span>Confirmed</div>
+      <div class="legend-item"><span class="ldot silver"></span>Candidate</div>
+    </div>
     <div class="legend-grid" id="legendGrid"></div>
   </div>
 </aside>
@@ -96,6 +113,15 @@
 </button>
 
 <div id="toast"></div>
+
+<div id="dayPicker">
+  <div class="dp-card">
+    <div class="dp-title" id="dpTitle">Confirm to which day?</div>
+    <div class="dp-sub" id="dpSub"></div>
+    <div class="dp-grid" id="dpGrid"></div>
+    <button class="dp-cancel" id="dpCancel">Cancel</button>
+  </div>
+</div>
 
 <div id="map"></div>
 
