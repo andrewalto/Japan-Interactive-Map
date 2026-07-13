@@ -660,3 +660,55 @@
   }
   #backdrop.show { opacity: 1; pointer-events: auto; }
   @media (min-width: 761px) { #backdrop { display: none; } }
+
+/* ──────── Install banner (PWA) ──────── */
+#installBanner {
+  position: absolute;
+  left: 50%;
+  bottom: -120px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(480px, calc(100vw - 24px));
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  z-index: 800;
+  transition: bottom 0.35s cubic-bezier(.4,.0,.2,1);
+}
+#installBanner.show { bottom: 16px; }
+#installBanner .ib-icon { font-size: 26px; flex-shrink: 0; }
+#installBanner .ib-text { flex: 1; min-width: 0; }
+#installBanner .ib-title { font-size: 13px; font-weight: 700; }
+#installBanner .ib-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; line-height: 1.35; }
+#installBanner .ib-share-icon {
+  display: inline-block;
+  color: #0a84ff;
+  font-weight: 700;
+  transform: rotate(90deg);
+}
+#installBanner .ib-action {
+  flex-shrink: 0;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+#installBanner .ib-action:hover { background: var(--accent-deep); }
+#installBanner .ib-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--ink-mute);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+}
