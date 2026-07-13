@@ -9,12 +9,12 @@
    below (Console → Project settings → Your apps → SDK setup and configuration). */
 
 export const firebaseConfig = {
-  apiKey: "PASTE_ME",
-  authDomain: "PASTE_ME",
-  projectId: "PASTE_ME",
-  storageBucket: "PASTE_ME",
-  messagingSenderId: "PASTE_ME",
-  appId: "PASTE_ME",
+  apiKey: "AIzaSyBJJ1209V9BsfbEICKT9nKQFZ-62cp0V8A",
+  authDomain: "japan-trip-map-95b55.firebaseapp.com",
+  projectId: "japan-trip-map-95b55",
+  storageBucket: "japan-trip-map-95b55.firebasestorage.app",
+  messagingSenderId: "577741041882",
+  appId: "1:577741041882:web:22f32c569a56407cb035e3",
 };
 
 export const isConfigured = firebaseConfig.projectId !== "PASTE_ME";

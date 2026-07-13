@@ -22,6 +22,8 @@ const SOFT_DELETE_DAYS = 7;
 
 let listeners = [];
 let places = [];
+let discarded = []; // soft-deleted within the last SOFT_DELETE_DAYS
+export function getDiscarded() { return discarded; }
 let resolveReady;
 export const ready = new Promise((res) => (resolveReady = res));
 
@@ -99,10 +101,14 @@ async function init() {
   fs.onSnapshot(
     fs.collection(db, "places"),
     (snap) => {
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      // Map shows only non-deleted places; recently-discarded ones stay in
+      // `discarded` for SOFT_DELETE_DAYS so a "bring that back" is possible.
       const cutoff = Date.now() - SOFT_DELETE_DAYS * 24 * 60 * 60 * 1000;
-      places = snap.docs
-        .map((d) => ({ id: d.id, ...d.data() }))
-        .filter((p) => !p.deletedAt || Date.parse(p.deletedAt) > cutoff);
+      places = all.filter((p) => !p.deletedAt);
+      discarded = all.filter(
+        (p) => p.deletedAt && Date.parse(p.deletedAt) > cutoff
+      );
       resolveReady();
       emit();
     },
