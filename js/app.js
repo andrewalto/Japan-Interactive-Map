@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { CATEGORIES, dayColor } from "./data.js";
-import { onPlaces, confirmPlace, discardPlace, restorePlace, getDiscarded } from "./store.js";
+import { onPlaces, confirmPlace, moveToDay, discardPlace, restorePlace, getDiscarded } from "./store.js";
 
 /* ============================================================
    STATE
@@ -71,41 +71,90 @@ function escapeHtml(s) {
   }[c]));
 }
 
-function popupHTML(p) {
+function attribHTML(p) {
+  if (p.addedBy === "Itinerary V1") return "From the original itinerary";
+  let s = `Added by ${escapeHtml(p.addedBy || "?")}` + (p.addedAt ? ` · ${timeAgo(p.addedAt)}` : "");
+  if (p.status === "confirmed" && p.confirmedBy && p.confirmedBy !== p.addedBy) {
+    s += ` · Confirmed by ${escapeHtml(p.confirmedBy)}`;
+  }
+  return s;
+}
+
+function popupContent(p) {
   const c = CATEGORIES[p.category] || CATEGORIES.cultural;
   const [lat, lng] = p.coords;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-  return `
-    <div class="pop">
-      <div class="pop-head" style="background:linear-gradient(135deg, ${c.color}, ${c.color}cc);">
-        <div class="pop-badges">
-          <span class="pop-badge">${p.status === "candidate" ? "Candidate" : `Day ${p.day}`}</span>
-          <span class="pop-badge">${escapeHtml(c.label)}</span>
-        </div>
-        <h3 class="pop-title">${escapeHtml(p.name)}</h3>
-        <div class="pop-tagline">${escapeHtml(p.tagline)}</div>
+  const isCandidate = p.status === "candidate";
+
+  const statusRow = isCandidate
+    ? `<div class="pop-status candidate"><span class="ps-mark">◌</span>Candidate — proposed by ${escapeHtml(p.addedBy || "?")}</div>`
+    : `<div class="pop-status confirmed"><span class="ps-mark">✓</span>Confirmed — Day ${p.day}</div>`;
+
+  const stat = (ico, val, unknownLabel) =>
+    val
+      ? `<div class="pop-stat"><span class="st-ico">${ico}</span><span class="st-txt">${escapeHtml(val)}</span></div>`
+      : `<div class="pop-stat unknown"><span class="st-ico">${ico}</span><span class="st-txt">${unknownLabel}</span></div>`;
+
+  const el = document.createElement("div");
+  el.className = "pop";
+  el.innerHTML = `
+    ${statusRow}
+    <div class="pop-head" style="background:linear-gradient(135deg, ${c.color}, ${c.color}cc);">
+      <div class="pop-badges">
+        ${isCandidate ? "" : `<span class="pop-badge">Day ${p.day}</span>`}
+        <span class="pop-badge">${escapeHtml(c.label)}</span>
       </div>
-      <div class="pop-body">
-        <p class="pop-desc">${escapeHtml(p.desc)}</p>
-        <div class="pop-meta">
-          <div class="pop-meta-row"><span class="pop-meta-icon">🕐</span><span>${escapeHtml(p.hours)}</span></div>
-          <div class="pop-meta-row"><span class="pop-meta-icon">💴</span><span>${escapeHtml(p.cost)}</span></div>
-          <div class="pop-meta-row tip"><span class="pop-meta-icon">💡</span><span>${escapeHtml(p.tip)}</span></div>
-        </div>
-        <a class="pop-cta" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Open in Google Maps
-        </a>
+      <h3 class="pop-title">${escapeHtml(p.name)}</h3>
+      ${p.tagline ? `<div class="pop-tagline">${escapeHtml(p.tagline)}</div>` : ""}
+    </div>
+    <div class="pop-body">
+      ${p.desc ? `<p class="pop-desc">${escapeHtml(p.desc)}</p>` : ""}
+      <div class="pop-stats">
+        ${stat("🕐", p.hours, "hours not yet known")}
+        ${stat("💴", p.cost, "cost not yet known")}
       </div>
+      ${p.tip ? `<div class="pop-tip"><span class="pt-ico">💡</span><span>${escapeHtml(p.tip)}</span></div>` : ""}
+      <div class="pop-actions">
+        <button class="pop-act primary" data-act="${isCandidate ? "confirm" : "move"}">
+          ${isCandidate ? "Confirm" : "Move day"}
+        </button>
+        <button class="pop-act danger" data-act="remove">Remove</button>
+      </div>
+      <a class="pop-cta" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Open in Google Maps
+      </a>
+      <div class="pop-attrib">${attribHTML(p)}</div>
     </div>
   `;
+
+  el.querySelector('[data-act="confirm"], [data-act="move"]').addEventListener("click", async (e) => {
+    const day = await showDayPicker(p.name);
+    if (day == null) return;
+    if (e.target.dataset.act === "confirm") {
+      await confirmPlace(p.id, day, getUserName());
+      toast(`Confirmed to Day ${day}`);
+    } else {
+      await moveToDay(p.id, day);
+      toast(`Moved to Day ${day}`);
+    }
+  });
+
+  el.querySelector('[data-act="remove"]').addEventListener("click", async () => {
+    if (!window.confirm(`Remove "${p.name}" from the map? It can be restored for 7 days.`)) return;
+    await discardPlace(p.id);
+    toast(`Removed — restorable for 7 days`);
+  });
+
+  return el;
 }
 
 function buildMarkers() {
   allMarkers.length = 0;
   places.forEach(p => {
     const m = L.marker(p.coords, { icon: makeDivIcon(p) });
-    m.bindPopup(popupHTML(p), { closeButton: true, autoPan: true, maxWidth: 280, minWidth: 280 });
+    // content built fresh on each open so status/attribution stay current
+    m.bindPopup(() => popupContent(p), { closeButton: true, autoPan: true, maxWidth: 280, minWidth: 280 });
     allMarkers.push({ marker: m, point: p });
   });
 }

@@ -905,3 +905,113 @@
   cursor: pointer;
 }
 .dp-cancel:hover { color: var(--ink); }
+
+/* ──────── Popup V2 ──────── */
+.pop-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.pop-status.confirmed {
+  background: #faf3dc;
+  color: #8a6d1a;
+  border-bottom: 1px solid #eddfb3;
+}
+.pop-status.candidate {
+  background: #eef2f6;
+  color: #5b6b7c;
+  border-bottom: 1px solid #dbe3ea;
+}
+.pop-status .ps-mark { font-size: 12px; }
+
+/* lighter, smaller badges — metadata, not headline */
+.pop-badges { margin-bottom: 6px; }
+.pop-badge {
+  font-size: 9px;
+  padding: 2px 7px;
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.22);
+  font-weight: 600;
+}
+.pop-title { font-size: 19px; }
+
+/* compact hours/cost stat row */
+.pop-stats {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.pop-stat {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.pop-stat + .pop-stat { border-left: 1px solid var(--line); }
+.pop-stat .st-ico { flex-shrink: 0; font-size: 12px; }
+.pop-stat .st-txt { min-width: 0; }
+.pop-stat.unknown .st-txt { color: var(--ink-mute); font-style: italic; }
+
+/* tighter tip callout */
+.pop-tip {
+  background: #fef7e8;
+  border-left: 3px solid #f5b800;
+  padding: 6px 9px;
+  border-radius: 6px;
+  color: #6b5b00;
+  font-size: 11.5px;
+  line-height: 1.4;
+  display: flex;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+.pop-tip .pt-ico { color: #c69500; flex-shrink: 0; }
+
+/* inline actions */
+.pop-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.pop-act {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pop-act.primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+}
+.pop-act.primary:hover { background: #000; }
+.pop-act.danger:hover { border-color: #c33; color: #c33; }
+
+.pop-cta { padding: 9px 12px; font-size: 12px; }
+
+/* attribution footer */
+.pop-attrib {
+  margin-top: 9px;
+  font-size: 10.5px;
+  color: var(--ink-mute);
+  line-height: 1.4;
+}
