@@ -1243,3 +1243,54 @@ body.pin-drop-mode .leaflet-container { cursor: crosshair !important; }
   font-size: 12px;
   cursor: pointer;
 }
+
+/* ──────── Day capacity flag ──────── */
+.day-pill.full::after {
+  content: "";
+  position: absolute;
+  top: 4px; right: 5px;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: #e8a013;
+  box-shadow: 0 0 0 1.5px #fff;
+}
+.day-pill.active.full::after { box-shadow: 0 0 0 1.5px var(--ink); }
+
+/* ──────── Conflict nudge dialog ──────── */
+#conflictDlg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 950;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#conflictDlg.show { display: flex; }
+#conflictDlg .cd-list {
+  margin: 4px 0 12px;
+  padding: 8px 12px;
+  background: #fbf7ec;
+  border: 1px solid #eddfb3;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  line-height: 1.6;
+}
+.cd-actions { display: flex; flex-direction: column; gap: 6px; }
+.cd-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cd-btn:hover { border-color: var(--ink); }
+.cd-btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+.cd-btn.primary:hover { background: #000; }

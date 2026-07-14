@@ -129,7 +129,7 @@ function popupContent(p) {
   `;
 
   el.querySelector('[data-act="confirm"], [data-act="move"]').addEventListener("click", async (e) => {
-    const day = await showDayPicker(p.name);
+    const day = await chooseDayFor(p);
     if (day == null) return;
     if (e.target.dataset.act === "confirm") {
       await confirmPlace(p.id, day, getUserName());
@@ -454,7 +454,7 @@ function renderCandidates() {
       if (isMobile()) closeSidebar();
     });
     card.querySelector(".confirm").addEventListener("click", async () => {
-      const day = await showDayPicker(p.name);
+      const day = await chooseDayFor(p);
       if (day == null) return;
       await confirmPlace(p.id, day, getUserName());
       toast(`Confirmed to Day ${day}`);
@@ -487,6 +487,80 @@ function renderDiscarded() {
     });
     wrap.appendChild(row);
   });
+}
+
+/* ============================================================
+   DAY CAPACITY FLAG
+   ============================================================ */
+
+const DAY_CAPACITY = 5; // confirmed places before a day pill shows the amber dot
+
+function updateDayCapacityFlags() {
+  const counts = {};
+  places.forEach((p) => {
+    if (p.status === "confirmed" && p.day) counts[p.day] = (counts[p.day] || 0) + 1;
+  });
+  document.querySelectorAll(".day-pill").forEach((pill) => {
+    const d = parseInt(pill.dataset.day, 10);
+    const n = counts[d] || 0;
+    const full = n >= DAY_CAPACITY;
+    pill.classList.toggle("full", full);
+    pill.title = full ? `Day ${d} — ${n} places confirmed, getting full` : `Day ${d}`;
+  });
+}
+
+/* ============================================================
+   CONFLICT NUDGE
+   Fires when a day would get its 3rd+ confirmed place of the
+   same category (no time-of-day data exists, so lunch+dinner
+   style pairs stay silent; a third food spot etc. gets a nudge).
+   ============================================================ */
+
+let cdResolve = null;
+
+function showConflictDialog(place, day, clashes) {
+  const c = CATEGORIES[place.category] || CATEGORIES.cultural;
+  document.getElementById("cdTitle").textContent = `Day ${day} is stacking up`;
+  document.getElementById("cdText").textContent =
+    `It already has ${clashes.length} ${c.label.toLowerCase()} places confirmed:`;
+  document.getElementById("cdList").innerHTML =
+    clashes.map((x) => escapeHtml(x.name)).join("<br>");
+  document.getElementById("conflictDlg").classList.add("show");
+  return new Promise((res) => (cdResolve = res));
+}
+
+function closeConflictDialog(choice) {
+  document.getElementById("conflictDlg").classList.remove("show");
+  if (cdResolve) { cdResolve(choice); cdResolve = null; }
+}
+
+function wireConflictDialog() {
+  document.getElementById("cdAnyway").addEventListener("click", () => closeConflictDialog("anyway"));
+  document.getElementById("cdRepick").addEventListener("click", () => closeConflictDialog("repick"));
+  document.getElementById("cdCancel").addEventListener("click", () => closeConflictDialog("cancel"));
+  document.getElementById("conflictDlg").addEventListener("click", (e) => {
+    if (e.target.id === "conflictDlg") closeConflictDialog("cancel");
+  });
+}
+
+/* Day selection with the conflict check folded in. Returns a day or null. */
+async function chooseDayFor(place) {
+  for (;;) {
+    const day = await showDayPicker(place.name);
+    if (day == null) return null;
+    const clashes = places.filter(
+      (x) =>
+        x.id !== place.id &&
+        x.status === "confirmed" &&
+        x.day === day &&
+        x.category === place.category
+    );
+    if (clashes.length < 2) return day;
+    const choice = await showConflictDialog(place, day, clashes);
+    if (choice === "anyway") return day;
+    if (choice === "cancel") return null;
+    // "repick" → loop back to the day picker
+  }
 }
 
 /* ============================================================
@@ -844,6 +918,7 @@ function restoreFromHash() {
 buildDayStripe();
 buildDayPills();
 buildDayPicker();
+wireConflictDialog();
 wireAddPlace();
 restoreFromHash();
 refreshDayPills();
@@ -857,6 +932,7 @@ onPlaces((list) => {
   buildCategoryList();
   buildLegend();
   renderCandidates();
+  updateDayCapacityFlags();
   renderMarkers(false);
 
   if (firstData && places.length > 0) {
