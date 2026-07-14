@@ -353,11 +353,9 @@ export const CATEGORIES = {
   lodging:       { color: "#0d9488", symbol: "🛏", label: "Lodging" },
 };
 
-// Day colors: blue (1) → red (16)
-export function dayColor(day) {
-  const t = (day - 1) / 15; // 0..1
-  // interpolate hue from blue (220) to red (0) via 180 (cyan) → 60 (yellow) → 0 (red)
-  // simpler: HSL hue 215 -> 0
+// Day colors: blue (day 1) → red (last day), scaled to the trip length
+export function dayColor(day, total = 16) {
+  const t = (day - 1) / Math.max(total - 1, 1); // 0..1
   const hue = 215 - (215 * t);
   return `hsl(${hue}, 72%, 50%)`;
 }

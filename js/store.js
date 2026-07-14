@@ -24,6 +24,19 @@ let listeners = [];
 let places = [];
 let discarded = []; // soft-deleted within the last SOFT_DELETE_DAYS
 export function getDiscarded() { return discarded; }
+
+/* Shared trip settings (settings/trip doc). Defaults apply until the
+   doc exists or while running without a backend. */
+let settingsListeners = [];
+let tripSettings = { totalDays: 16 };
+export function onSettings(cb) {
+  settingsListeners.push(cb);
+  cb(tripSettings);
+}
+function emitSettings() {
+  settingsListeners.forEach((cb) => cb(tripSettings));
+}
+
 let resolveReady;
 export const ready = new Promise((res) => (resolveReady = res));
 
@@ -123,6 +136,18 @@ async function init() {
       }
     }
   );
+
+  fs.onSnapshot(
+    fs.doc(db, "settings", "trip"),
+    (snap) => {
+      const data = snap.data();
+      if (data && Number.isInteger(data.totalDays)) {
+        tripSettings = { totalDays: data.totalDays };
+        emitSettings();
+      }
+    },
+    (err) => console.error("Settings listener error:", err)
+  );
 }
 
 /* ---------- writes (no-ops with a console warning in local mode) ---------- */
@@ -181,6 +206,23 @@ export async function discardPlace(id) {
 export async function restorePlace(id) {
   if (!requireBackend()) return;
   await fs.updateDoc(fs.doc(db, "places", id), { deletedAt: null });
+}
+
+/* Change the trip length. `strandedIds` are confirmed places on days
+   beyond the new length — they're demoted back to candidates in the
+   same batch so nothing is lost. */
+export async function setTripLength(totalDays, strandedIds = []) {
+  if (!requireBackend()) return;
+  const batch = fs.writeBatch(db);
+  strandedIds.forEach((id) => {
+    batch.update(fs.doc(db, "places", id), {
+      status: "candidate",
+      day: null,
+      confirmedBy: null,
+    });
+  });
+  batch.set(fs.doc(db, "settings", "trip"), { totalDays });
+  await batch.commit();
 }
 
 /* ---------- one-time V1 migration ---------- */

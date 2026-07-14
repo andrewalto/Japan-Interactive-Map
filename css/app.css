@@ -1294,3 +1294,31 @@ body.pin-drop-mode .leaflet-container { cursor: crosshair !important; }
 .cd-btn:hover { border-color: var(--ink); }
 .cd-btn.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
 .cd-btn.primary:hover { background: #000; }
+
+/* ──────── Trip length controls ──────── */
+.day-length-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.day-length-row button {
+  width: 26px; height: 26px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.day-length-row button:hover { border-color: var(--ink); color: var(--ink); }
+.day-length-row span {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  font-variant-numeric: tabular-nums;
+}

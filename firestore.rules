@@ -22,5 +22,14 @@ service cloud.firestore {
         request.resource.data.status in ['candidate', 'confirmed'];
       allow delete: if false; // soft-delete only (deletedAt field)
     }
+
+    // Shared trip settings (currently just the trip length)
+    match /settings/trip {
+      allow read: if true;
+      allow write: if
+        request.resource.data.totalDays is int &&
+        request.resource.data.totalDays >= 1 &&
+        request.resource.data.totalDays <= 30;
+    }
   }
 }

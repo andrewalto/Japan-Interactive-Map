@@ -26,7 +26,7 @@
   <div class="sb-header">
     <div>
       <div class="sb-title">Japan 2026</div>
-      <div class="sb-sub">16 days · Tokyo → Kansai</div>
+      <div class="sb-sub" id="sbSub">16 days · Tokyo → Kansai</div>
     </div>
     <div style="display:flex; gap:6px; align-items:center;">
       <div class="sb-count" id="pinCount">0 pins</div>
@@ -49,6 +49,11 @@
     <div class="sb-section">
       <h3>Days <span class="hint" id="daysHint">tap to filter</span></h3>
       <div class="day-pills" id="dayPills"></div>
+      <div class="day-length-row">
+        <button id="dayMinus" aria-label="Remove a day" title="Remove a day">−</button>
+        <span id="dayLenLabel">16-day trip</span>
+        <button id="dayPlus" aria-label="Add a day" title="Add a day">+</button>
+      </div>
       <div class="toggle-row" id="candDayToggle">
         <div>
           <div class="label">Also show candidates</div>

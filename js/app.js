@@ -4,7 +4,7 @@
    ============================================================ */
 
 import { CATEGORIES, dayColor } from "./data.js";
-import { onPlaces, addPlace, confirmPlace, moveToDay, discardPlace, restorePlace, getDiscarded } from "./store.js";
+import { onPlaces, onSettings, setTripLength, addPlace, confirmPlace, moveToDay, discardPlace, restorePlace, getDiscarded } from "./store.js";
 
 /* ============================================================
    STATE
@@ -21,7 +21,7 @@ const state = {
   showCandidatesWithDay: false,   // "also show candidates" when a day is filtered
 };
 
-const totalDays = 16;
+let totalDays = 16;
 
 /* ============================================================
    MAP SETUP
@@ -266,7 +266,7 @@ function renderRoute() {
   routeLayer = L.layerGroup();
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i], b = points[i+1];
-    const color = dayColor(b.day);
+    const color = dayColor(b.day, totalDays);
     const line = L.polyline([a.latlng, b.latlng], {
       color,
       weight: 3,
@@ -305,7 +305,7 @@ function buildDayPills() {
   for (let d = 1; d <= totalDays; d++) {
     const pill = document.createElement("button");
     pill.className = "day-pill";
-    pill.style.setProperty("--day-color", dayColor(d));
+    pill.style.setProperty("--day-color", dayColor(d, totalDays));
     pill.textContent = d;
     pill.title = `Day ${d}`;
     pill.dataset.day = d;
@@ -382,7 +382,7 @@ function buildDayStripe() {
   for (let d = 1; d <= totalDays; d++) {
     const seg = document.createElement("div");
     seg.className = "seg";
-    seg.style.background = dayColor(d);
+    seg.style.background = dayColor(d, totalDays);
     seg.title = `Day ${d}`;
     wrap.appendChild(seg);
   }
@@ -564,21 +564,82 @@ async function chooseDayFor(place) {
 }
 
 /* ============================================================
+   TRIP LENGTH
+   ============================================================ */
+
+const MAX_TRIP_DAYS = 30;
+
+function rebuildDayUI() {
+  document.getElementById("sbSub").textContent = `${totalDays} days · Tokyo → Kansai`;
+  document.getElementById("dayLenLabel").textContent = `${totalDays}-day trip`;
+  buildDayStripe();
+  buildDayPills();
+  buildDayPickerGrid();
+  // drop selections beyond the new length
+  [...state.selectedDays].forEach((d) => {
+    if (d > totalDays) state.selectedDays.delete(d);
+  });
+  refreshDayPills();
+  updateDayCapacityFlags();
+  renderMarkers(false);
+}
+
+function wireTripLength() {
+  document.getElementById("dayPlus").addEventListener("click", async () => {
+    if (totalDays >= MAX_TRIP_DAYS) { toast(`Capped at ${MAX_TRIP_DAYS} days`); return; }
+    try {
+      await setTripLength(totalDays + 1);
+      toast(`Trip is now ${totalDays + 1} days`);
+    } catch (err) {
+      console.error(err);
+      toast("Couldn't save the trip length — check the Firestore rules");
+    }
+  });
+
+  document.getElementById("dayMinus").addEventListener("click", async () => {
+    if (totalDays <= 1) return;
+    const newTotal = totalDays - 1;
+    const stranded = places.filter(
+      (p) => p.status === "confirmed" && p.day > newTotal
+    );
+    if (stranded.length) {
+      const names = stranded.map((p) => `• ${p.name}`).join("\n");
+      const ok = window.confirm(
+        `Day ${totalDays} has ${stranded.length} confirmed place${stranded.length > 1 ? "s" : ""}:\n\n${names}\n\nShorten the trip anyway? They'll go back to being candidates (nothing is deleted).`
+      );
+      if (!ok) return;
+    }
+    try {
+      await setTripLength(newTotal, stranded.map((p) => p.id));
+      toast(`Trip is now ${newTotal} days`);
+    } catch (err) {
+      console.error(err);
+      toast("Couldn't save the trip length — check the Firestore rules");
+    }
+  });
+}
+
+/* ============================================================
    DAY PICKER
    ============================================================ */
 
 let dpResolve = null;
 
-function buildDayPicker() {
+function buildDayPickerGrid() {
   const grid = document.getElementById("dpGrid");
+  grid.innerHTML = "";
   for (let d = 1; d <= totalDays; d++) {
     const btn = document.createElement("button");
     btn.className = "dp-day";
-    btn.style.setProperty("--day-color", dayColor(d));
+    btn.style.setProperty("--day-color", dayColor(d, totalDays));
     btn.textContent = d;
     btn.addEventListener("click", () => closeDayPicker(d));
     grid.appendChild(btn);
   }
+}
+
+function buildDayPicker() {
+  buildDayPickerGrid();
   document.getElementById("dpCancel").addEventListener("click", () => closeDayPicker(null));
   document.getElementById("dayPicker").addEventListener("click", (e) => {
     if (e.target.id === "dayPicker") closeDayPicker(null);
@@ -920,8 +981,16 @@ buildDayPills();
 buildDayPicker();
 wireConflictDialog();
 wireAddPlace();
+wireTripLength();
 restoreFromHash();
 refreshDayPills();
+
+// Shared trip length: rebuild all day-based UI when it changes
+onSettings((s) => {
+  if (s.totalDays === totalDays) return;
+  totalDays = s.totalDays;
+  rebuildDayUI();
+});
 
 // Data-dependent UI: rebuilt on every store update (first load,
 // someone adds/confirms a place, offline sync catches up, …)
