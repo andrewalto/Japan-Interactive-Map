@@ -16,17 +16,19 @@
 </head>
 <body>
 
-<!-- Tile recolouring matrix. Solved by sampling matching tiles from the
-     old CARTO basemap and the current Esri one: it maps Esri's water
-     rgb(191,217,242) onto V1's rgb(212,218,220) and holds green at about
-     half its original saturation, while white, grey and label black pass
-     through untouched. sRGB interpolation so the values behave like the
-     CSS shorthand filters they replace. -->
+<!-- Tile recolouring matrix, solved from sampled tiles of each basemap.
+     Anchors: Esri water rgb(191,217,242) -> rgb(212,215,216), a muted
+     grey-blue (V1's own water still carried twice this tint); Esri green
+     rgb(210,233,177) -> rgb(217,229,201), about half saturation so parks
+     stay readable; white, grey and label black pass through untouched.
+     sRGB interpolation so the values behave like the CSS shorthand
+     filters they replace. Re-solve rather than hand-tweaking: changing
+     one anchor moves the whole matrix. -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <filter id="tileTone" color-interpolation-filters="sRGB">
     <feColorMatrix type="matrix" values="0.3348 0.5170 0.1482 0 0
-                                         0.0217 0.9158 0.0625 0 0
-                                         0.3112 0.2452 0.4436 0 0
+                                         0.1044 0.8671 0.0286 0 0
+                                         0.4215 0.1802 0.3983 0 0
                                          0      0      0      1 0"/>
   </filter>
 </svg>
