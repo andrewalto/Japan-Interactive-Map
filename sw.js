@@ -1,9 +1,11 @@
 /* Service worker: offline app shell + map tile cache.
    Bump CACHE_VERSION on every deploy that changes shell files. */
 
-const CACHE_VERSION = "v2.7.0";
+const CACHE_VERSION = "v2.8.1";
 const SHELL_CACHE = `japan-map-shell-${CACHE_VERSION}`;
-const TILE_CACHE = "japan-map-tiles";
+// Bump the tile cache name when the tile provider changes so previously
+// cached tiles from the old provider are dropped rather than lingering.
+const TILE_CACHE = "japan-map-tiles-osm";
 const MAX_TILES = 800; // ~30-60MB; enough for the whole itinerary at street zoom
 
 const SHELL_ASSETS = [
@@ -28,7 +30,7 @@ const SHELL_ASSETS = [
   "./icons/icon-maskable-512.png",
 ];
 
-const TILE_HOSTS = ["basemaps.cartocdn.com"];
+const TILE_HOSTS = ["tile.openstreetmap.org"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -47,7 +49,11 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((k) => k.startsWith("japan-map-shell-") && k !== SHELL_CACHE)
+          .filter(
+            (k) =>
+              (k.startsWith("japan-map-shell-") && k !== SHELL_CACHE) ||
+              (k.startsWith("japan-map-tiles") && k !== TILE_CACHE)
+          )
           .map((k) => caches.delete(k))
       )
     ).then(() => self.clients.claim())
@@ -112,7 +118,9 @@ async function tileCacheFirst(req) {
   if (hit) return hit;
   try {
     const res = await fetch(req);
-    if (res.ok) {
+    // Opaque responses (a tile requested without CORS) report ok:false and
+    // status:0, so testing res.ok alone would silently cache nothing.
+    if (res.ok || res.type === "opaque") {
       await cache.put(req, res.clone());
       trimTileCache(cache); // fire-and-forget
     }

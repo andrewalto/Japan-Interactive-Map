@@ -33,10 +33,16 @@ const map = L.map("map", {
   worldCopyJump: false,
 }).setView([35.5, 137.5], 6);
 
-L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+// OpenStreetMap standard tiles: no API key, full street-level zoom, and
+// Japanese labels. Softened toward the paper palette by a CSS filter on
+// .leaflet-tile-pane (see app.css) rather than a styled tile provider.
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   maxZoom: 19,
-  subdomains: "abcd",
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  // CORS mode (OSM sends Access-Control-Allow-Origin: *) so the service
+  // worker gets a real status back and can tell a good tile from an error.
+  // Without this the response is opaque and uncacheable-by-inspection.
+  crossOrigin: true,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }).addTo(map);
 
 map.zoomControl.setPosition("topright");

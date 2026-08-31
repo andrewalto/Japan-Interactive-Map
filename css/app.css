@@ -1322,3 +1322,9 @@ body.pin-drop-mode .leaflet-container { cursor: crosshair !important; }
   color: var(--ink-mute);
   font-variant-numeric: tabular-nums;
 }
+
+/* Soften OSM's default palette toward the app's paper/cream aesthetic.
+   Applied to tiles only so markers, popups and controls stay full-strength. */
+.leaflet-tile-pane {
+  filter: saturate(0.62) brightness(1.04) contrast(0.96);
+}
