@@ -34,19 +34,21 @@ const map = L.map("map", {
 }).setView([35.5, 137.5], 6);
 
 /* Basemap tone.
-   Rows of a colour matrix fitted to sampled tiles, mapping Esri's palette
-   toward V1's: water rgb(191,217,242) -> rgb(199,203,210) (darker, muted),
-   greens held around 0.10 saturation so parks stay readable, salmon roads
-   quietened. Rows sum to 1, so greys and label black pass through neutral.
+   Colour matrix fitted by weighted least squares to colours sampled from
+   real tiles, so each part of the palette can be aimed separately:
+     water  rgb(191,217,242) -> rgb(198,201,212)  darker, muted
+     greens kept near Esri's own saturation (~0.19 of 0.24) so land reads green
+     roads  salmon -> quiet warm grey (0.15 of 0.45)
+   Rows sum to 1, so greys and label black pass through neutral.
 
    Applied per tile in canvas rather than as a CSS filter: `filter: url(#…)`
    referencing an SVG colour matrix silently does nothing in some browsers
    (Safari showed the unfiltered map), and the CSS shorthand filters cannot
-   darken water and keep greens independently. */
+   aim water and greens independently — dragging one always moved the other. */
 const TONE = [
-  [0.77586, 0.14493, 0.07921],
-  [0.56714, 0.40135, 0.03152],
-  [0.65422, -0.04368, 0.38946],
+  [0.79374, 0.12434, 0.08192],
+  [0.50591, 0.59014, -0.09605],
+  [0.75411, -0.32299, 0.56887],
 ];
 
 const TonedTileLayer = L.TileLayer.extend({
