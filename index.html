@@ -16,6 +16,21 @@
 </head>
 <body>
 
+<!-- Tile recolouring matrix. Solved by sampling matching tiles from the
+     old CARTO basemap and the current Esri one: it maps Esri's water
+     rgb(191,217,242) onto V1's rgb(212,218,220) and holds green at about
+     half its original saturation, while white, grey and label black pass
+     through untouched. sRGB interpolation so the values behave like the
+     CSS shorthand filters they replace. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="tileTone" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0.3348 0.5170 0.1482 0 0
+                                         0.0217 0.9158 0.0625 0 0
+                                         0.3112 0.2452 0.4436 0 0
+                                         0      0      0      1 0"/>
+  </filter>
+</svg>
+
 <div id="dayStripe"></div>
 
 <button id="menuBtn" aria-label="Show sidebar" title="Show sidebar">

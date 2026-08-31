@@ -33,17 +33,21 @@ const map = L.map("map", {
   worldCopyJump: false,
 }).setView([35.5, 137.5], 6);
 
-// OpenStreetMap standard tiles: no API key, full street-level zoom, and
-// Japanese labels. Softened toward the paper palette by a CSS filter on
-// .leaflet-tile-pane (see app.css) rather than a styled tile provider.
-L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  // CORS mode (OSM sends Access-Control-Allow-Origin: *) so the service
-  // worker gets a real status back and can tell a good tile from an error.
-  // Without this the response is opaque and uncacheable-by-inspection.
-  crossOrigin: true,
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
+// Esri World Street Map: no API key, data down to z19, and bilingual
+// labels in Japan (e.g. "渋谷駅 / Shibuya Sta.") — OSM's tiles carry
+// Japanese only. Recoloured toward the V1 palette by the #tileTone
+// colour matrix in index.html (see app.css).
+// crossOrigin so the service worker sees a real status and can tell a
+// good tile from an error; Esri sends Access-Control-Allow-Origin: *.
+L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+  {
+    maxZoom: 19,
+    crossOrigin: true,
+    attribution:
+      'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
+  }
+).addTo(map);
 
 map.zoomControl.setPosition("topright");
 

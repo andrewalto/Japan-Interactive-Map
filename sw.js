@@ -1,11 +1,11 @@
 /* Service worker: offline app shell + map tile cache.
    Bump CACHE_VERSION on every deploy that changes shell files. */
 
-const CACHE_VERSION = "v2.9.0";
+const CACHE_VERSION = "v3.0.0";
 const SHELL_CACHE = `japan-map-shell-${CACHE_VERSION}`;
 // Bump the tile cache name when the tile provider changes so previously
 // cached tiles from the old provider are dropped rather than lingering.
-const TILE_CACHE = "japan-map-tiles-osm";
+const TILE_CACHE = "japan-map-tiles-esri";
 const MAX_TILES = 800; // ~30-60MB; enough for the whole itinerary at street zoom
 
 const SHELL_ASSETS = [
@@ -30,7 +30,7 @@ const SHELL_ASSETS = [
   "./icons/icon-maskable-512.png",
 ];
 
-const TILE_HOSTS = ["tile.openstreetmap.org"];
+const TILE_HOSTS = ["server.arcgisonline.com"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

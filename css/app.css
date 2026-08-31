@@ -1323,11 +1323,13 @@ body.pin-drop-mode .leaflet-container { cursor: crosshair !important; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Recreate V1's CARTO Positron palette on OpenStreetMap tiles.
-   Values solved empirically by sampling matching tiles from both
-   providers: they map OSM's water rgb(170,211,223) onto Positron's
-   rgb(212,218,220) while leaving land near-white. Tiles only, so
-   markers, popups and controls keep full colour. */
+/* Recolour the basemap toward V1's palette. A plain saturate() could not
+   do this job: greying the water enough also drained the greens. The
+   #tileTone matrix (index.html) separates them — water lands on V1's
+   grey-blue while parks keep about half their saturation. The shorthand
+   below is a fallback for engines without SVG filter references.
+   Tiles only, so markers, popups and controls keep full colour. */
 .leaflet-tile-pane {
-  filter: saturate(0.14) brightness(1.06) contrast(1.02);
+  filter: saturate(0.45);
+  filter: url(#tileTone);
 }
