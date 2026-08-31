@@ -33,17 +33,73 @@ const map = L.map("map", {
   worldCopyJump: false,
 }).setView([35.5, 137.5], 6);
 
+/* Basemap tone.
+   Rows of a colour matrix fitted to sampled tiles, mapping Esri's palette
+   toward V1's: water rgb(191,217,242) -> rgb(199,203,210) (darker, muted),
+   greens held around 0.10 saturation so parks stay readable, salmon roads
+   quietened. Rows sum to 1, so greys and label black pass through neutral.
+
+   Applied per tile in canvas rather than as a CSS filter: `filter: url(#…)`
+   referencing an SVG colour matrix silently does nothing in some browsers
+   (Safari showed the unfiltered map), and the CSS shorthand filters cannot
+   darken water and keep greens independently. */
+const TONE = [
+  [0.77586, 0.14493, 0.07921],
+  [0.56714, 0.40135, 0.03152],
+  [0.65422, -0.04368, 0.38946],
+];
+
+const TonedTileLayer = L.TileLayer.extend({
+  createTile(coords, done) {
+    const canvas = document.createElement("canvas");
+    const size = this.getTileSize();
+    canvas.width = size.x;
+    canvas.height = size.y;
+
+    // Leaflet's _abortLoading drops any off-zoom tile whose `complete` is
+    // falsy. Canvases have no such property, so without this every old-zoom
+    // tile would be torn down mid-zoom and the map would flash blank
+    // instead of holding the previous tiles underneath.
+    canvas.complete = false;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous"; // Esri sends ACAO:*; needed to read pixels back
+    img.onload = () => {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, size.x, size.y);
+      try {
+        const frame = ctx.getImageData(0, 0, size.x, size.y);
+        const p = frame.data;
+        const [[a, b, c], [d, e, f], [g, h, i]] = TONE;
+        for (let k = 0; k < p.length; k += 4) {
+          const r = p[k], gr = p[k + 1], bl = p[k + 2];
+          p[k]     = a * r + b * gr + c * bl;
+          p[k + 1] = d * r + e * gr + f * bl;
+          p[k + 2] = g * r + h * gr + i * bl;
+        }
+        ctx.putImageData(frame, 0, 0);
+      } catch (err) {
+        // Pixels unreadable (blocked storage/canvas): leave the tile as-is
+        // rather than losing the map.
+        console.warn("Tile tone skipped:", err);
+      }
+      canvas.complete = true;
+      done(null, canvas);
+    };
+    img.onerror = (err) => done(err, canvas);
+    img.src = this.getTileUrl(coords);
+
+    return canvas;
+  },
+});
+
 // Esri World Street Map: no API key, data down to z19, and bilingual
 // labels in Japan (e.g. "渋谷駅 / Shibuya Sta.") — OSM's tiles carry
-// Japanese only. Recoloured toward the V1 palette by the #tileTone
-// colour matrix in index.html (see app.css).
-// crossOrigin so the service worker sees a real status and can tell a
-// good tile from an error; Esri sends Access-Control-Allow-Origin: *.
-L.tileLayer(
+// Japanese only.
+new TonedTileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
   {
     maxZoom: 19,
-    crossOrigin: true,
     attribution:
       'Tiles &copy; <a href="https://www.esri.com/">Esri</a> — Esri, HERE, Garmin, &copy; OpenStreetMap contributors'
   }

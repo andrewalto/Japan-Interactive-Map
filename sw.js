@@ -1,7 +1,7 @@
 /* Service worker: offline app shell + map tile cache.
    Bump CACHE_VERSION on every deploy that changes shell files. */
 
-const CACHE_VERSION = "v3.0.1";
+const CACHE_VERSION = "v3.1.1";
 const SHELL_CACHE = `japan-map-shell-${CACHE_VERSION}`;
 // Bump the tile cache name when the tile provider changes so previously
 // cached tiles from the old provider are dropped rather than lingering.
