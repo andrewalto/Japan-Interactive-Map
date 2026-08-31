@@ -1323,8 +1323,11 @@ body.pin-drop-mode .leaflet-container { cursor: crosshair !important; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Soften OSM's default palette toward the app's paper/cream aesthetic.
-   Applied to tiles only so markers, popups and controls stay full-strength. */
+/* Recreate V1's CARTO Positron palette on OpenStreetMap tiles.
+   Values solved empirically by sampling matching tiles from both
+   providers: they map OSM's water rgb(170,211,223) onto Positron's
+   rgb(212,218,220) while leaving land near-white. Tiles only, so
+   markers, popups and controls keep full colour. */
 .leaflet-tile-pane {
-  filter: saturate(0.62) brightness(1.04) contrast(0.96);
+  filter: saturate(0.14) brightness(1.06) contrast(1.02);
 }
